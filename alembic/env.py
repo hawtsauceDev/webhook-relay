@@ -1,16 +1,16 @@
-import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
+from webhook_relay import models
+from webhook_relay.config import get_settings
+from webhook_relay.models.base import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-url = os.environ.get("DATABASE_URL", "")
-if url.startswith("postgresql://"):
-    url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+url = get_settings().database_url.get_secret_value()
 config.set_main_option("sqlalchemy.url", url)
 
 # Interpret the config file for Python logging.
@@ -22,7 +22,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = None
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

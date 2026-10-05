@@ -1370,7 +1370,7 @@ dependencies = [
     { name = "celery" },
     { name = "fastapi", extra = ["standard"] },
     { name = "psycopg", extra = ["binary"] },
-    { name = "python-dotenv" },
+    { name = "pydantic-settings" },
     { name = "redis" },
     { name = "sqlalchemy" },
 ]
@@ -1381,7 +1381,7 @@ requires-dist = [
     { name = "celery", specifier = ">=5.6.3" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.141.1" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.5" },
-    { name = "python-dotenv", specifier = ">=1.2.3" },
+    { name = "pydantic-settings", specifier = ">=2.15.0" },
     { name = "redis", specifier = ">=8.1.0" },
     { name = "sqlalchemy", specifier = ">=2.0.52" },
 ]
