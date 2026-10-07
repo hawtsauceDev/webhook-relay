@@ -9,7 +9,7 @@ from webhook_relay.schemas.health import HealthResponse
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(tags=["API Health"])
 
 
 @router.get("/health", response_model=HealthResponse)
