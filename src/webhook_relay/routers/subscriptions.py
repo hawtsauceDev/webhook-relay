@@ -22,7 +22,7 @@ router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
 def create_subscription(
     subscription_data: SubscriptionCreate, db: DbSession
 ) -> SubscriptionRead:
-    subscription = Subscription(**subscription_data.model_dump())
+    subscription = Subscription(**subscription_data.model_dump(mode="json"))
     db.add(subscription)
     try:
         db.commit()
@@ -30,14 +30,14 @@ def create_subscription(
         db.rollback()
 
         constraint_name = getattr(
-            getattr(exc.org, "diag", None), "constraint_name", None
+            getattr(exc.orig, "diag", None), "constraint_name", None
         )
 
         if constraint_name == "uq_subscriptions_target_url":
-            logger.exception(
+            logger.warning(
                 "Failed to create subscription: subscription already exists for target_url=%s and event_type=%s",
-                subscription.target_url,
-                subscription.event_type,
+                str(subscription.target_url),
+                str(subscription.event_type),
             )
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
