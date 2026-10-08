@@ -18,7 +18,7 @@ class Delivery(Base):
         index=True,
     )
 
-    status: Mapped[DeliveryStatus] = mapped_column(String, server_default="pending")
+    status: Mapped[DeliveryStatus] = mapped_column(String(25), server_default="pending")
 
     attempt_count: Mapped[int] = mapped_column(server_default="0")
 

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import TIMESTAMP, func
+from sqlalchemy import TIMESTAMP, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from webhook_relay.models.base import Base
@@ -10,7 +10,7 @@ class Subscription(Base):
     __tablename__ = "subscriptions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    target_url: Mapped[str]
+    target_url: Mapped[str] = mapped_column(String(2048))
     event_type: Mapped[str] = mapped_column(index=True)
     active: Mapped[bool] = mapped_column(
         server_default="true",
@@ -22,3 +22,5 @@ class Subscription(Base):
     deliveries: Mapped[list["Delivery"]] = relationship(
         back_populates="subscription",
     )
+
+    __table_args__ = (UniqueConstraint("target_url", "event_type"),)
