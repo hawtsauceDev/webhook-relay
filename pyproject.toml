@@ -22,3 +22,8 @@ build-backend = "uv_build"
 
 [tool.fastapi]
 entrypoint = "webhook_relay.main:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

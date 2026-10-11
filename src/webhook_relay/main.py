@@ -12,7 +12,7 @@ async def lifespan(app: FastAPI):
     # Startup
     yield
 
-    #Shutdown
+    # Shutdown
     engine.dispose()
 
 
