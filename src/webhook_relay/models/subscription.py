@@ -5,6 +5,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from webhook_relay.models.base import Base
 
+SUBSCRIPTION_TARGET_EVENT_UNIQUE_CONSTRAINT = (
+    "uq_subscriptions_target_url_event_type"
+)
+
 
 class Subscription(Base):
     __tablename__ = "subscriptions"

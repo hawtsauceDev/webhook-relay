@@ -10,9 +10,11 @@ engine = create_engine(
     connect_args={
         "connect_timeout": 5,
     },
+    hide_parameters=True,
 )
 
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+
 
 def get_db():
     with SessionLocal() as db:
