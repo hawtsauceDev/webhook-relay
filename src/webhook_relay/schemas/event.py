@@ -10,9 +10,11 @@ from webhook_relay.schemas.types import EventType
 class EventCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     event_type: EventType = Field(
-        description="Event type of the incoming event", examples=["user.created"]
+        description="Event type of the incoming event", examples=["order.created"]
     )
-    payload: dict[str, Any]
+    payload: dict[str, Any] = Field(
+        description="Payload of the incoming event", examples=[{"order_id": 1}]
+    )
 
 
 class EventRead(BaseModel):

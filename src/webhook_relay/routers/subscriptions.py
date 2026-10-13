@@ -47,8 +47,9 @@ def get_db_error_details(error: BaseException | None) -> tuple[str | None, str |
     "",
     status_code=status.HTTP_201_CREATED,
     response_model=SubscriptionRead,
+    summary="Create a new subscription",
     responses={
-        409: {
+        status.HTTP_409_CONFLICT: {
             "description": (
                 "A subscription already exists for this target URL and event type."
             ),
