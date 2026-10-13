@@ -15,32 +15,30 @@ logger = logging.getLogger(__name__)
 def ingest_event(
     db: Session, event_type: str, payload: dict[str, Any]
 ) -> tuple[Event, list[Delivery]]:
-    event = Event(event_type=event_type, payload=payload)
-    db.add(event)
     try:
-        db.flush()
-
         matching_subs = get_active_subscriptions(db, event_type)
 
+        event = Event(event_type=event_type, payload=payload)
         delivery_list: list[Delivery] = []
+
         for sub in matching_subs:
             delivery = Delivery(
-                event_id=event.id, subscription_id=sub.id, status=DeliveryStatus.PENDING
+                event=event, subscription_id=sub.id, status=DeliveryStatus.PENDING
             )
             delivery_list.append(delivery)
-            db.add(delivery)
 
+        db.add(event)
         db.commit()
-        logger.info(
-            "Event created. event_id=%s, event_type=%s, deliveries=%s",
-            event.id,
-            event.event_type,
-            len(delivery_list),
-        )
+
     except SQLAlchemyError:
         db.rollback()
 
         logger.exception("Error while creating Event with event_type=%s", event_type)
         raise
-
+    logger.info(
+        "Event created. event_id=%s, event_type=%s, deliveries=%s",
+        event.id,
+        event.event_type,
+        len(delivery_list),
+    )
     return event, delivery_list
