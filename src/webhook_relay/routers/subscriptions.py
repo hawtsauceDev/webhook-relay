@@ -20,7 +20,6 @@ from webhook_relay.schemas.subscription import (
 from webhook_relay.schemas.types import EventType
 
 # Test imports
-
 from webhook_relay.services.subscriptions import get_active_subscriptions
 
 PG_UNIQUE_VIOLATION = "23505"
@@ -163,7 +162,7 @@ def list_subscriptions(
     return subscriptions
 
 
-# Test Endpoint
+# --- Test Endpoint ---
 
 
 @router.get(
@@ -174,6 +173,9 @@ def debug_active_subscriptions(
     db: DbSession, event_type: EventType
 ) -> Sequence[Subscription]:
     return get_active_subscriptions(db, event_type)
+
+
+# --- END ---
 
 
 @router.get(
