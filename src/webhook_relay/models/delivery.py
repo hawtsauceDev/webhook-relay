@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import TIMESTAMP, ForeignKey, String, func
+from sqlalchemy import TIMESTAMP, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from webhook_relay.enums import DeliveryStatus
@@ -11,7 +11,7 @@ class Delivery(Base):
     __tablename__ = "deliveries"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), index=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"))
 
     subscription_id: Mapped[int] = mapped_column(
         ForeignKey("subscriptions.id"),
@@ -34,3 +34,5 @@ class Delivery(Base):
     subscription: Mapped["Subscription"] = relationship(back_populates="deliveries")
 
     attempts: Mapped[list["DeliveryAttempt"]] = relationship(back_populates="delivery")
+
+    __table_args__ = (UniqueConstraint("event_id", "subscription_id"),)
