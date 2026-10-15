@@ -4,15 +4,17 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from webhook_relay.enums import DeliveryStatus
-from webhook_relay.schemas.types import EventType
+from webhook_relay.schemas.types import EventPayload, EventType
 
 
 class EventCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     event_type: EventType = Field(
-        description="Event type of the incoming event", examples=["user.created"]
+        description="Event type of the incoming event", examples=["order.created"]
     )
-    payload: dict[str, Any]
+    payload: EventPayload = Field(
+        description="Payload of the incoming event", examples=[{"order_id": 1}]
+    )
 
 
 class EventRead(BaseModel):

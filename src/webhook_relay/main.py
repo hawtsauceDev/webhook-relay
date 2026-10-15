@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from webhook_relay.database import engine
+from webhook_relay.routers.events import router as event_router
 from webhook_relay.routers.health import router as health_router
 from webhook_relay.routers.subscriptions import router as subscription_router
 
@@ -26,3 +27,5 @@ app = FastAPI(
 app.include_router(health_router)
 
 app.include_router(subscription_router)
+
+app.include_router(event_router)

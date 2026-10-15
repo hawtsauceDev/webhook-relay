@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Sequence
 
 import psycopg
 from fastapi import APIRouter, HTTPException, Query, status
@@ -17,6 +18,9 @@ from webhook_relay.schemas.subscription import (
     SubscriptionUpdate,
 )
 from webhook_relay.schemas.types import EventType
+
+# Test imports
+from webhook_relay.services.subscriptions import get_active_subscriptions
 
 PG_UNIQUE_VIOLATION = "23505"
 
@@ -43,8 +47,9 @@ def get_db_error_details(error: BaseException | None) -> tuple[str | None, str |
     "",
     status_code=status.HTTP_201_CREATED,
     response_model=SubscriptionRead,
+    summary="Create a new subscription",
     responses={
-        409: {
+        status.HTTP_409_CONFLICT: {
             "description": (
                 "A subscription already exists for this target URL and event type."
             ),
@@ -136,7 +141,7 @@ def list_subscriptions(
     active: bool | None = None,
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-) -> list[Subscription]:
+) -> Sequence[Subscription]:
     query = select(Subscription)
     if target_url is not None:
         query = query.where(Subscription.target_url == str(target_url))
@@ -156,6 +161,22 @@ def list_subscriptions(
     subscriptions = db.scalars(query).all()
 
     return subscriptions
+
+
+# --- Test Endpoint ---
+
+
+@router.get(
+    "/active_subs",
+    response_model=list[SubscriptionRead],
+)
+def debug_active_subscriptions(
+    db: DbSession, event_type: EventType
+) -> Sequence[Subscription]:
+    return get_active_subscriptions(db, event_type)
+
+
+# --- END ---
 
 
 @router.get(
