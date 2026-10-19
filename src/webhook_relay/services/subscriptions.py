@@ -3,10 +3,15 @@ from collections.abc import Sequence
 from urllib.parse import urlsplit
 
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from webhook_relay.db_errors import PG_UNIQUE_VIOLATION, get_db_error_details
+from webhook_relay.exceptions import (
+    SubscriptionAlreadyExists,
+    SubscriptionCreationError,
+    SubscriptionUpdateError,
+)
 from webhook_relay.models.subscription import (
     SUBSCRIPTION_TARGET_EVENT_UNIQUE_CONSTRAINT,
     Subscription,
@@ -15,10 +20,7 @@ from webhook_relay.models.subscription import (
 logger = logging.getLogger(__name__)
 
 
-class SubscriptionAlreadyExists(Exception):
-    def __init__(self, existing_id: int | None) -> None:
-        super().__init__("Subscription already exists")
-        self.existing_id = existing_id
+
 
 
 def create_subscription(db: Session, target_url: str, event_type: str) -> Subscription:
@@ -26,9 +28,9 @@ def create_subscription(db: Session, target_url: str, event_type: str) -> Subscr
     db.add(subscription)
     try:
         db.commit()
-    except IntegrityError as exc:
+    except SQLAlchemyError as exc:
         db.rollback()
-        sqlstate, constraint_name = get_db_error_details(exc.orig)
+        sqlstate, constraint_name = get_db_error_details(getattr(exc, "orig", None))
         if (
             sqlstate == PG_UNIQUE_VIOLATION
             and constraint_name == SUBSCRIPTION_TARGET_EVENT_UNIQUE_CONSTRAINT
@@ -38,22 +40,36 @@ def create_subscription(db: Session, target_url: str, event_type: str) -> Subscr
                 urlsplit(target_url).hostname,
                 event_type,
             )
-            existing_id = db.scalar(
-                select(Subscription.id).where(
-                    Subscription.target_url == target_url,
-                    Subscription.event_type == event_type,
-                )
-            )
-            raise SubscriptionAlreadyExists(existing_id) from exc
+            existing_id = _find_existing_subscription_id(db, target_url, event_type)
+            raise SubscriptionAlreadyExists(existing_id) from None
         logger.error(
             "Unexpected database error while creating subscription "
-            "(sqlstate=%s, constraint=%s)",
+            "(error_type=%s, sqlstate=%s, constraint=%s)",
+            type(exc).__name__,
             sqlstate,
             constraint_name,
         )
-        raise
-    db.refresh(subscription)
+        raise SubscriptionCreationError from None
     return subscription
+
+
+def _find_existing_subscription_id(
+    db: Session, target_url: str, event_type: str
+) -> int | None:
+    try:
+        return db.scalar(
+            select(Subscription.id).where(
+                Subscription.target_url == target_url,
+                Subscription.event_type == event_type,
+            )
+        )
+    except SQLAlchemyError as exc:
+        db.rollback()
+        logger.warning(
+            "Could not re-read existing subscription id (error_type=%s)",
+            type(exc).__name__,
+        )
+        return None
 
 
 def get_active_subscriptions(db: Session, event_type: str) -> Sequence[Subscription]:
@@ -65,3 +81,25 @@ def get_active_subscriptions(db: Session, event_type: str) -> Sequence[Subscript
 
     subscriptions = db.scalars(query).all()
     return subscriptions
+
+
+def update_subscription(
+    db: Session, subscription: Subscription, active: bool
+) -> Subscription:
+    subscription_id = subscription.id
+    subscription.active = active
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        sqlstate, constraint_name = get_db_error_details(getattr(exc, "orig", None))
+        logger.error(
+            "Unexpected database error while updating subscription "
+            "(subscription_id=%s, error_type=%s, sqlstate=%s, constraint=%s)",
+            subscription_id,
+            type(exc).__name__,
+            sqlstate,
+            constraint_name,
+        )
+        raise SubscriptionUpdateError from None
+    return subscription

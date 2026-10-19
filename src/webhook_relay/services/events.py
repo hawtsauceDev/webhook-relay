@@ -4,7 +4,9 @@ from typing import Any
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from webhook_relay.db_errors import get_db_error_details
 from webhook_relay.enums import DeliveryStatus
+from webhook_relay.exceptions import EventIngestionError
 from webhook_relay.models.delivery import Delivery
 from webhook_relay.models.event import Event
 from webhook_relay.services.subscriptions import get_active_subscriptions
@@ -19,6 +21,7 @@ def ingest_event(
         matching_subs = get_active_subscriptions(db, event_type)
 
         event = Event(event_type=event_type, payload=payload)
+        db.add(event)
         delivery_list: list[Delivery] = []
 
         for sub in matching_subs:
@@ -27,14 +30,22 @@ def ingest_event(
             )
             delivery_list.append(delivery)
 
-        db.add(event)
+        db.add_all(delivery_list)
         db.commit()
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as exc:
         db.rollback()
+        sqlstate, constraint_name = get_db_error_details(getattr(exc, "orig", None))
+        logger.error(
+            "Unexpected database error while ingesting event "
+            "(event_type=%s, error_type=%s, sqlstate=%s, constraint=%s)",
+            event_type,
+            type(exc).__name__,
+            sqlstate,
+            constraint_name,
+        )
+        raise EventIngestionError from None
 
-        logger.exception("Error while creating Event with event_type=%s", event_type)
-        raise
     logger.info(
         "Event created. event_id=%s, event_type=%s, deliveries=%s",
         event.id,

@@ -5,6 +5,7 @@ from pydantic import HttpUrl
 from sqlalchemy import select
 
 from webhook_relay.dependencies import DbSession, SubscriptionDep
+from webhook_relay.exceptions import SubscriptionCreationError, SubscriptionUpdateError
 from webhook_relay.models.subscription import (
     Subscription,
 )
@@ -25,6 +26,13 @@ SUBSCRIPTION_CONFLICT_MESSAGE = (
 )
 SUBSCRIPTION_CONFLICT_MESSAGE_NONE = "A conflicting subscription was detected, but it could not be retrieved. Please retry."
 
+SUBSCRIPTION_CREATE_FAILED_MESSAGE = (
+    "Could not create the subscription. Please try again later."
+)
+
+SUBSCRIPTION_UPDATE_FAILED_MESSAGE = (
+    "Could not update the subscription. Please try again later."
+)
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
 
@@ -49,7 +57,10 @@ router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
                     }
                 }
             },
-        }
+        },
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {
+            "description": SUBSCRIPTION_CREATE_FAILED_MESSAGE
+        },
     },
 )
 def create_subscription(
@@ -64,16 +75,21 @@ def create_subscription(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail={
-                    "message": SUBSCRIPTION_CONFLICT_MESSAGE_NONE,
+                    "message": (SUBSCRIPTION_CONFLICT_MESSAGE_NONE),
                     "subscription_id": None,
                 },
             ) from None
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
-                "message": SUBSCRIPTION_CONFLICT_MESSAGE,
+                "message": (SUBSCRIPTION_CONFLICT_MESSAGE),
                 "subscription_id": exc.existing_id,
             },
+        ) from None
+    except SubscriptionCreationError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(SUBSCRIPTION_CREATE_FAILED_MESSAGE),
         ) from None
 
 
@@ -120,14 +136,29 @@ def get_subscription(
 @router.patch(
     "/{subscription_id}",
     response_model=SubscriptionRead,
+    summary="Activate or deactivate a subscription",
+    responses={
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {
+            "description": "Unexpected database error. No internal details are exposed",
+            "content": {
+                "application/json": {
+                    "example": {"detail": SUBSCRIPTION_UPDATE_FAILED_MESSAGE}
+                }
+            },
+        }
+    },
 )
 def update_subscription(
     subscription_update: SubscriptionUpdate,
     subscription: SubscriptionDep,
     db: DbSession,
 ) -> Subscription:
-    subscription.active = subscription_update.active
-
-    db.commit()
-
-    return subscription
+    try:
+        return subscriptions_service.update_subscription(
+            db, subscription, subscription_update.active
+        )
+    except SubscriptionUpdateError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=SUBSCRIPTION_UPDATE_FAILED_MESSAGE,
+        ) from None
