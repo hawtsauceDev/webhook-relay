@@ -1,6 +1,7 @@
 import logging
 from typing import Any
 
+from kombu.exceptions import OperationalError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -10,6 +11,7 @@ from webhook_relay.exceptions import EventIngestionError
 from webhook_relay.models.delivery import Delivery
 from webhook_relay.models.event import Event
 from webhook_relay.services.subscriptions import get_active_subscriptions
+from webhook_relay.worker.tasks import process_delivery
 
 logger = logging.getLogger(__name__)
 
@@ -52,4 +54,15 @@ def ingest_event(
         event.event_type,
         len(delivery_list),
     )
+
+    for delivery in delivery_list:
+        try:
+            process_delivery.delay(delivery.id)
+        except OperationalError as exc:
+            logger.error(
+                "Couldn't establish connection to broker(delivery_id=%s, error_type=%s)",
+                delivery.id,
+                type(exc).__name__,
+            )
+
     return event, delivery_list
