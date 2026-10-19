@@ -1,6 +1,7 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 
 from webhook_relay.dependencies import DbSession
+from webhook_relay.exceptions import EventIngestionError
 from webhook_relay.schemas.event import EventCreate, EventCreateResponse
 from webhook_relay.services.events import ingest_event
 
@@ -13,6 +14,8 @@ EVENT_UNPROCESSABLE_MESSAGE = (
     "or the body includes unknown extra fields."
 )
 
+EVENT_INGEST_FAILED_MESSAGE = "Could not store the event. Please try again later."
+
 router = APIRouter(prefix="/events", tags=["events"])
 
 
@@ -24,14 +27,31 @@ router = APIRouter(prefix="/events", tags=["events"])
     responses={
         status.HTTP_422_UNPROCESSABLE_CONTENT: {
             "description": EVENT_UNPROCESSABLE_MESSAGE
-        }
+        },
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {
+            "description": "Unexpected database error. No internal details are exposed.",
+            "content": {
+                "application/json": {"example": {"detail": EVENT_INGEST_FAILED_MESSAGE}}
+            },
+        },
     },
 )
 def create_event(db: DbSession, event_data: EventCreate) -> EventCreateResponse:
-    """This function creates deliveries to listening subscriptions based on incoming events\n
-    Event is saved even if no subscriptions are listening to it\n
-    event_type is normalized"""
-    event, deliveries = ingest_event(db, event_data.event_type, event_data.payload)
+    """Ingest an event and create one pending delivery per matching subscription.
+
+    The event is stored even if no subscriptions are listening to it.
+
+    `event_type` is normalized (trimmed and lowercased) before matching.
+    """
+    
+    try:
+        event, deliveries = ingest_event(db, event_data.event_type, event_data.payload)
+    except EventIngestionError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=EVENT_INGEST_FAILED_MESSAGE,
+        ) from None
+
     delivery_ids: list[int] = []
     for delivery in deliveries:
         delivery_ids.append(delivery.id)
