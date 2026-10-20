@@ -6,6 +6,8 @@ settings = get_settings()
 
 app = Celery(
     "webhook_relay",
-    broker = settings.celery_broker_url.get_secret_value(),
-    include=["webhook_relay.worker.tasks"]
+    broker=settings.celery_broker_url.get_secret_value(),
+    include=["webhook_relay.worker.tasks"],
 )
+
+app.conf.update(task_acks_late=True)
