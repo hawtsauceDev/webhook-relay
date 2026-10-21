@@ -21,3 +21,8 @@ class SubscriptionUpdateError(PersistenceError):
 class EventIngestionError(PersistenceError):
     def __init__(self) -> None:
         super().__init__("Failed to ingest event")
+
+
+class DeliveryAttemptRecordingError(PersistenceError):
+    def __init__(self) -> None:
+        super().__init__("Failed to record delivery attempt")

@@ -6,3 +6,4 @@ class DeliveryStatus(StrEnum):
     PROCESSING = "processing"
     SUCCESS = "success"
     FAILED = "failed"
+    SKIPPED = "skipped"
