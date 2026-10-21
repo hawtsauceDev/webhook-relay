@@ -10,4 +10,4 @@ app = Celery(
     include=["webhook_relay.worker.tasks"],
 )
 
-app.conf.update(task_acks_late=True)
+app.conf.update(task_acks_late=True, task_soft_time_limit=30, task_time_limit=40)
