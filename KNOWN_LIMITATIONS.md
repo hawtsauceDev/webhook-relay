@@ -1,6 +1,6 @@
 # Known Limitations
 
-Deliberate, documented trade-offs of the MVP (Days 1-6). Each entry has an ID, the impact, and a status:
+Documented trade-offs of the MVP. Each entry has an ID, the impact, and a status:
 
 - **Accepted**: decided not to fix; reasoning recorded.
 - **v2**: planned for a later version.
@@ -57,7 +57,6 @@ Deliberate, documented trade-offs of the MVP (Days 1-6). Each entry has an ID, t
 
 | ID | Limitation | Impact | Status |
 |---|---|---|---|
-| OPS-1 | **No automated tests yet.** Verification is manual (Bruno/Postman, `psql`). | Regressions are not caught automatically. | Planned: Day 7. The case list is in the project brief. |
 | OPS-2 | **`/health` checks only the database.** It does not check Redis, and the worker has no health check. | A dead broker or worker is not reported. | Accepted |
 | OPS-3 | **Postgres and Redis ports are published to the host.** | Fine for local debugging, wrong for production. | Accepted (dev-only compose file) |
 | OPS-4 | **The test receiver depends on the bind mount.** It is not part of the installed package. | It only works in the dev setup. | Accepted (dev-only tool) |
