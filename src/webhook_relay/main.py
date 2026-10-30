@@ -4,8 +4,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
+from starlette.middleware import Middleware
+from starlette.middleware.body_limit import RequestBodyLimitMiddleware
 
+from webhook_relay.config import get_settings
 from webhook_relay.database import engine
+from webhook_relay.routers.deliveries import router as delivery_router
 from webhook_relay.routers.events import router as event_router
 from webhook_relay.routers.health import router as health_router
 from webhook_relay.routers.subscriptions import router as subscription_router
@@ -27,11 +31,15 @@ app = FastAPI(
     description="A reliable webhook delivery service.",
     version="0.1.0",
     lifespan=lifespan,
+    middleware=[
+        Middleware(
+            RequestBodyLimitMiddleware,
+            max_body_size=get_settings().max_request_body_size,
+        )
+    ],
 )
 
-app.exception_handler(SQLAlchemyError)
-
-
+@app.exception_handler(SQLAlchemyError)
 async def database_error_handler(
     request: Request, exc: SQLAlchemyError
 ) -> JSONResponse:
@@ -52,3 +60,5 @@ app.include_router(health_router)
 app.include_router(subscription_router)
 
 app.include_router(event_router)
+
+app.include_router(delivery_router)
