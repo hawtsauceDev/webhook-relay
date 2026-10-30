@@ -5,7 +5,11 @@ from pydantic import HttpUrl
 from sqlalchemy import select
 
 from webhook_relay.dependencies import DbSession, SubscriptionDep
-from webhook_relay.exceptions import SubscriptionCreationError, SubscriptionUpdateError
+from webhook_relay.exceptions import (
+    SubscriptionAlreadyExists,
+    SubscriptionCreationError,
+    SubscriptionUpdateError,
+)
 from webhook_relay.models.subscription import (
     Subscription,
 )
@@ -16,9 +20,6 @@ from webhook_relay.schemas.subscription import (
 )
 from webhook_relay.schemas.types import EventType
 from webhook_relay.services import subscriptions as subscriptions_service
-from webhook_relay.services.subscriptions import (
-    SubscriptionAlreadyExists,
-)
 
 SUBSCRIPTION_CONFLICT_MESSAGE = (
     "A subscription for this target url and event type already exists. "
