@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from webhook_relay.database import get_db
+from webhook_relay.models.event import Event
 from webhook_relay.models.subscription import Subscription
 
 DbSession = Annotated[Session, Depends(get_db)]
@@ -26,3 +27,19 @@ def get_subscription_or_404(
 
 
 SubscriptionDep = Annotated[Subscription, Depends(get_subscription_or_404)]
+
+
+def get_event_or_404(
+    event_id: Annotated[int, Path(ge=1)],
+    db: DbSession,
+) -> Event:
+    event = db.scalar(select(Event).where(Event.id == event_id))
+
+    if event is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Event not found"
+        )
+    return event
+
+
+EventDep = Annotated[Event, Depends(get_event_or_404)]

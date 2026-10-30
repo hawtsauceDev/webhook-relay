@@ -3,7 +3,6 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from webhook_relay.enums import DeliveryStatus
 from webhook_relay.schemas.types import EventPayload, EventType
 
 
@@ -22,14 +21,6 @@ class EventRead(BaseModel):
     id: int
     event_type: str
     payload: dict[str, Any]
-    created_at: datetime
-
-
-class DeliveryRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    subscription_id: int
-    status: DeliveryStatus
     created_at: datetime
 
 

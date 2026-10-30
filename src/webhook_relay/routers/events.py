@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException, status
 
-from webhook_relay.dependencies import DbSession
+from webhook_relay.dependencies import DbSession, EventDep
 from webhook_relay.exceptions import EventIngestionError
-from webhook_relay.schemas.event import EventCreate, EventCreateResponse
+from webhook_relay.models.event import Event
+from webhook_relay.schemas.event import EventCreate, EventCreateResponse, EventRead
 from webhook_relay.services.events import ingest_event
 
 EVENT_UNPROCESSABLE_MESSAGE = (
@@ -61,3 +62,16 @@ def create_event(db: DbSession, event_data: EventCreate) -> EventCreateResponse:
         delivery_ids=delivery_ids,
         created_at=event.created_at,
     )
+
+
+@router.get(
+    "/{event_id}",
+    response_model=EventRead,
+    summary="Get an event by ID",
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "Event not found"},
+    },
+)
+def get_event(event: EventDep) -> Event:
+    """Retrieve a single event by its ID."""
+    return event
